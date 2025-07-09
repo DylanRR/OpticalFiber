@@ -111,7 +111,7 @@ class OpticalFiberSimulation:
         self.encoder_device = None
         self.encoder_position_history = deque(maxlen=5)  # Store last 5 position changes for smoothing
         self.encoder_lock = threading.Lock()
-        self.encoder_slider_speed = 0.01  # Speed multiplier for encoder movement
+        self.encoder_slider_speed = 0.02  # Increased speed multiplier for encoder movement
         self.last_encoder_update = time.time()
         
         # Initialize encoder if available
@@ -651,7 +651,11 @@ class OpticalFiberSimulation:
             
         try:
             self.encoder_device = PhidgetEncoder()
-            self.encoder_device.setDeviceSerialNumber(689556)  # Set your encoder's serial number
+            
+            # Try without setting serial number first (will connect to any available encoder)
+            # Uncomment the line below and set the correct serial number if you have multiple encoders
+            # self.encoder_device.setDeviceSerialNumber(689556)
+            
             self.encoder_device.setOnPositionChangeHandler(self.on_encoder_position_change)
             
             # Start encoder thread
@@ -669,6 +673,9 @@ class OpticalFiberSimulation:
         try:
             current_time = time.time()
             
+            # Debug print to confirm encoder events are being received
+            print(f"Encoder change: {positionChange}, Time: {timeChange}, Index: {indexTriggered}")
+            
             # Add position change to history with timestamp
             with self.encoder_lock:
                 self.encoder_position_history.append({
@@ -685,10 +692,18 @@ class OpticalFiberSimulation:
             return
             
         try:
+            print("Attempting to connect to encoder...")
             # Open and wait for attachment
             self.encoder_device.openWaitForAttachment(5000)
             self.encoder_enabled = True
-            print("Encoder connected and ready!")
+            
+            # Print encoder information
+            print(f"Encoder connected successfully!")
+            try:
+                print(f"Encoder serial number: {self.encoder_device.getDeviceSerialNumber()}")
+                print(f"Encoder position: {self.encoder_device.getPosition()}")
+            except:
+                print("Could not read encoder details (methods may not be available)")
             
             # Keep the thread alive while the simulation is running
             while self.running:
@@ -716,10 +731,14 @@ class OpticalFiberSimulation:
             return
         
         with self.encoder_lock:
-            # Get recent position changes (within last 0.1 seconds)
+            # Debug: Print current history length
+            if len(self.encoder_position_history) > 0:
+                print(f"Processing {len(self.encoder_position_history)} encoder entries")
+            
+            # Get recent position changes (within last 0.2 seconds for more responsiveness)
             recent_changes = [
                 entry for entry in self.encoder_position_history
-                if current_time - entry['time'] < 0.1
+                if current_time - entry['time'] < 0.2
             ]
             
             if not recent_changes:
@@ -728,19 +747,22 @@ class OpticalFiberSimulation:
             # Calculate total movement and determine direction
             total_change = sum(entry['change'] for entry in recent_changes)
             
-            # Apply smoothing - only move if we have consistent direction
-            if len(recent_changes) >= 3:
-                # Check if majority of recent changes are in the same direction
-                positive_changes = sum(1 for entry in recent_changes if entry['change'] > 0)
-                negative_changes = sum(1 for entry in recent_changes if entry['change'] < 0)
-                
-                # Only apply movement if there's a clear direction preference
-                if positive_changes > negative_changes and total_change > 0:
+            # Debug: Print processing info
+            print(f"Recent changes: {len(recent_changes)}, Total change: {total_change}")
+            
+            # Reduce the requirement to just 1 change for more responsiveness
+            if len(recent_changes) >= 1:
+                # Apply movement based on total change direction
+                if total_change > 0:
                     # Move right (increase slider value)
+                    old_value = self.slider_value
                     self.slider_value = min(1.0, self.slider_value + self.encoder_slider_speed)
-                elif negative_changes > positive_changes and total_change < 0:
+                    print(f"Moving right: {old_value:.3f} -> {self.slider_value:.3f}")
+                elif total_change < 0:
                     # Move left (decrease slider value)
+                    old_value = self.slider_value
                     self.slider_value = max(0.0, self.slider_value - self.encoder_slider_speed)
+                    print(f"Moving left: {old_value:.3f} -> {self.slider_value:.3f}")
                 
                 # Clear processed history
                 self.encoder_position_history.clear()
