@@ -4,7 +4,13 @@
 # Main game/graphics library for the interactive simulation
 pygame>=2.5.0
 
+# Phidget library for encoder control (optional - encoder will be disabled if not available)
+Phidget22>=1.14.0
+
 # Standard library modules used (no installation required):
 # - math (for mathematical calculations)
 # - sys (for system operations)
 # - os (for environment variables)
+# - threading (for encoder control)
+# - time (for timing operations)
+# - collections (for deque data structure)
