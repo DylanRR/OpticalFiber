@@ -109,9 +109,11 @@ class OpticalFiberSimulation:
         self.encoder_enabled = False
         self.encoder_thread = None
         self.encoder_device = None
-        self.encoder_position_history = deque(maxlen=5)  # Store last 5 position changes for smoothing
+        self.encoder_position_history = deque(maxlen=10)  # Store more position changes for better smoothing
         self.encoder_lock = threading.Lock()
-        self.encoder_slider_speed = 0.02  # Increased speed multiplier for encoder movement
+        self.encoder_slider_speed = 0.002  # Much smaller step size for smoother, less sensitive movement
+        self.encoder_accumulator = 0.0  # Accumulate small movements before applying
+        self.encoder_threshold = 5  # Require more encoder ticks before moving slider
         self.last_encoder_update = time.time()
         
         # Initialize encoder if available
@@ -669,20 +671,25 @@ class OpticalFiberSimulation:
             self.encoder_device = None
     
     def on_encoder_position_change(self, encoder, positionChange, timeChange, indexTriggered):
-        """Handle encoder position changes with smoothing"""
+        """Handle encoder position changes with accumulation for less sensitive control"""
         try:
             current_time = time.time()
             
-            # Debug print to confirm encoder events are being received
-            print(f"Encoder change: {positionChange}, Time: {timeChange}, Index: {indexTriggered}")
-            
-            # Add position change to history with timestamp
+            # Accumulate position changes instead of storing individual events
             with self.encoder_lock:
+                self.encoder_accumulator += positionChange
+                
+                # Store position change for direction smoothing
                 self.encoder_position_history.append({
                     'change': positionChange,
                     'time': current_time,
                     'timeChange': timeChange
                 })
+                
+                # Reduced debug output - only show significant changes
+                if abs(self.encoder_accumulator) > 2:  # Only print when accumulator is building up
+                    print(f"Encoder accumulator: {self.encoder_accumulator:.1f}, latest change: {positionChange}")
+                    
         except Exception as e:
             print(f"Error in encoder position change handler: {e}")
     
@@ -699,11 +706,15 @@ class OpticalFiberSimulation:
             
             # Print encoder information
             print(f"Encoder connected successfully!")
+            # Note: Some encoder methods may not be available depending on the device/library version
             try:
-                print(f"Encoder serial number: {self.encoder_device.getDeviceSerialNumber()}")
-                print(f"Encoder position: {self.encoder_device.getPosition()}")
-            except:
-                print("Could not read encoder details (methods may not be available)")
+                # Attempt to get device details if available
+                serial_num = getattr(self.encoder_device, 'getDeviceSerialNumber', lambda: 'Unknown')()
+                position = getattr(self.encoder_device, 'getPosition', lambda: 'Unknown')()
+                print(f"Encoder serial number: {serial_num}")
+                print(f"Encoder position: {position}")
+            except Exception as detail_error:
+                print(f"Could not read encoder details: {detail_error}")
             
             # Keep the thread alive while the simulation is running
             while self.running:
@@ -720,8 +731,8 @@ class OpticalFiberSimulation:
                     pass
     
     def update_slider_from_encoder(self):
-        """Update slider position based on encoder input with direction smoothing"""
-        if not self.encoder_enabled or not self.encoder_position_history:
+        """Update slider position based on encoder input with accumulation and threshold for smooth, less sensitive control"""
+        if not self.encoder_enabled:
             return
         
         current_time = time.time()
@@ -730,42 +741,47 @@ class OpticalFiberSimulation:
         if self.dragging:
             return
         
+        # Debounce - only update every 50ms for smoother movement
+        if current_time - self.last_encoder_update < 0.05:
+            return
+        
         with self.encoder_lock:
-            # Debug: Print current history length
-            if len(self.encoder_position_history) > 0:
-                print(f"Processing {len(self.encoder_position_history)} encoder entries")
-            
-            # Get recent position changes (within last 0.2 seconds for more responsiveness)
-            recent_changes = [
-                entry for entry in self.encoder_position_history
-                if current_time - entry['time'] < 0.2
-            ]
-            
-            if not recent_changes:
-                return
-            
-            # Calculate total movement and determine direction
-            total_change = sum(entry['change'] for entry in recent_changes)
-            
-            # Debug: Print processing info
-            print(f"Recent changes: {len(recent_changes)}, Total change: {total_change}")
-            
-            # Reduce the requirement to just 1 change for more responsiveness
-            if len(recent_changes) >= 1:
-                # Apply movement based on total change direction
-                if total_change > 0:
-                    # Move right (increase slider value)
-                    old_value = self.slider_value
-                    self.slider_value = min(1.0, self.slider_value + self.encoder_slider_speed)
-                    print(f"Moving right: {old_value:.3f} -> {self.slider_value:.3f}")
-                elif total_change < 0:
-                    # Move left (decrease slider value)
-                    old_value = self.slider_value
-                    self.slider_value = max(0.0, self.slider_value - self.encoder_slider_speed)
-                    print(f"Moving left: {old_value:.3f} -> {self.slider_value:.3f}")
+            # Check if accumulated movement exceeds threshold
+            if abs(self.encoder_accumulator) >= self.encoder_threshold:
+                # Determine direction and calculate movement
+                if self.encoder_accumulator > 0:
+                    direction = 1
+                elif self.encoder_accumulator < 0:
+                    direction = -1
+                else:
+                    return
                 
-                # Clear processed history
-                self.encoder_position_history.clear()
+                # Calculate how many "steps" to take based on accumulated value
+                accumulated_steps = int(abs(self.encoder_accumulator) / self.encoder_threshold)
+                
+                # Apply movement with reduced sensitivity
+                movement = accumulated_steps * direction * self.encoder_slider_speed
+                old_value = self.slider_value
+                
+                # Use helper method to apply movement
+                self.apply_encoder_movement(movement)
+                
+                # Reduce accumulator by the amount we used
+                used_accumulator = accumulated_steps * self.encoder_threshold * direction
+                self.encoder_accumulator -= used_accumulator
+                
+                # Clear old history to prevent buildup
+                current_time = time.time()
+                self.encoder_position_history = [
+                    entry for entry in self.encoder_position_history
+                    if current_time - entry['time'] < 0.1  # Keep only very recent history
+                ]
+                
+                self.last_encoder_update = current_time
+                
+                # Debug output for significant movements only
+                if abs(movement) > 0.001:  # Only print when making noticeable movement
+                    print(f"Slider moved: {old_value:.3f} -> {self.slider_value:.3f} (steps: {accumulated_steps}, remaining accum: {self.encoder_accumulator:.1f})")
     
     def cleanup_encoder(self):
         """Clean up encoder resources"""
@@ -1149,6 +1165,13 @@ class OpticalFiberSimulation:
                 return True
         
         return False
+    
+    def apply_encoder_movement(self, movement):
+        """Apply encoder movement to slider with bounds checking"""
+        if movement > 0:
+            self.slider_value = min(1.0, self.slider_value + abs(movement))
+        elif movement < 0:
+            self.slider_value = max(0.0, self.slider_value - abs(movement))
     
     def run(self):
         while self.running:
