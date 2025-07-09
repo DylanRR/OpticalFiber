@@ -1,0 +1,10 @@
+# Requirements for Optical Fiber Light Path Simulation
+# This file lists all Python dependencies needed to run the simulation
+
+# Main game/graphics library for the interactive simulation
+pygame>=2.5.0
+
+# Standard library modules used (no installation required):
+# - math (for mathematical calculations)
+# - sys (for system operations)
+# - os (for environment variables)
