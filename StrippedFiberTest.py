@@ -42,55 +42,16 @@ DARK_RED = (139, 0, 0)
 # Critical angle for total internal reflection (typical for optical fiber)
 CRITICAL_ANGLE = 12.0  # degrees (realistic for glass core to glass cladding)
 
-# Slider dimensions
+# Slider dimensions - only angle slider
 SLIDER_HEIGHT = 60
 SLIDER_Y = SCREEN_HEIGHT - SLIDER_HEIGHT - 20
 SLIDER_X = 50
 SLIDER_WIDTH = SCREEN_WIDTH - 100
 SLIDER_HANDLE_WIDTH = 20
 
-# Thickness slider dimensions
-THICKNESS_SLIDER_HEIGHT = 40
-THICKNESS_SLIDER_WIDTH = 200
-THICKNESS_SLIDER_X = SCREEN_WIDTH - 320
-THICKNESS_SLIDER_Y = 320
-THICKNESS_SLIDER_HANDLE_WIDTH = 15
-
-# Dash gap slider dimensions
-DASH_GAP_SLIDER_HEIGHT = 40
-DASH_GAP_SLIDER_WIDTH = 200
-DASH_GAP_SLIDER_X = SCREEN_WIDTH - 320
-DASH_GAP_SLIDER_Y = 380
-DASH_GAP_SLIDER_HANDLE_WIDTH = 15
-
-# Dash speed slider dimensions
-DASH_SPEED_SLIDER_HEIGHT = 40
-DASH_SPEED_SLIDER_WIDTH = 200
-DASH_SPEED_SLIDER_X = SCREEN_WIDTH - 320
-DASH_SPEED_SLIDER_Y = 440
-DASH_SPEED_SLIDER_HANDLE_WIDTH = 15
-
-# Vibrance slider dimensions
-VIBRANCE_SLIDER_HEIGHT = 40
-VIBRANCE_SLIDER_WIDTH = 200
-VIBRANCE_SLIDER_X = SCREEN_WIDTH - 320
-VIBRANCE_SLIDER_Y = 500
-VIBRANCE_SLIDER_HANDLE_WIDTH = 15
-
-# Fiber dimensions (the main area where light travels) - now full screen
-FIBER_TOP = 0
-FIBER_BOTTOM = SCREEN_HEIGHT
-FIBER_LEFT = 0
-FIBER_RIGHT = SCREEN_WIDTH
-FIBER_HEIGHT = FIBER_BOTTOM - FIBER_TOP
-
 class OpticalFiberSimulation:
     def __init__(self):
         # Create fullscreen display for single ultra-wide monitor
-        # For Unix systems, use fullscreen mode
-        import os
-        
-        # Create a fullscreen window
         self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption("Optical Fiber Light Path Simulation - Ultra-Wide Monitor")
         
@@ -101,7 +62,7 @@ class OpticalFiberSimulation:
         self.clock = pygame.time.Clock()
         self.running = True
         
-        # Slider properties
+        # Slider properties - only angle slider
         self.slider_value = 0.5  # 0.0 to 1.0 (center position)
         self.dragging = False
         
@@ -120,27 +81,6 @@ class OpticalFiberSimulation:
         if PHIDGETS_AVAILABLE:
             self.setup_encoder()
         
-        # Thickness slider properties
-        self.thickness_value = 0.5  # 0.0 to 1.0 (medium thickness)
-        self.dragging_thickness = False
-        
-        # Dash gap slider properties
-        self.dash_gap_value = 0.5  # 0.0 to 1.0 (medium gap)
-        self.dragging_dash_gap = False
-        
-        # Dash speed slider properties
-        self.dash_speed_value = 0.5  # 0.0 to 1.0 (medium speed)
-        self.dragging_dash_speed = False
-        
-        # Vibrance slider properties
-        self.vibrance_value = 0.5  # 0.0 to 1.0 (medium vibrance)
-        self.dragging_vibrance = False
-        
-        # Font for text
-        self.font = pygame.font.Font(None, 36)
-        self.small_font = pygame.font.Font(None, 24)
-        self.checkbox_font = pygame.font.Font(None, 28)
-        
         # Laser animation properties
         self.time = 0
         self.pulse_intensity = 0
@@ -148,53 +88,48 @@ class OpticalFiberSimulation:
         # Global animation offset for continuous dashed line effect
         self.global_dash_offset = 0
         
-        # Effect toggle states
+        # HARDCODED EFFECT SETTINGS - No UI controls needed
+        # pulsing segments ON, solid+dashed line ON, line thickness 3.7x, 
+        # dash gap 0.3x, dash speed 4.9x, vibrance 1.1x
         self.effect_toggles = {
             'gradient_glow': True,
             'animated_properties': True,
             'laser_core_halo': True,
             'particle_effects': True,
-            'pulsing_segments': False,
-            'solid_with_dashes': False  # Sub-effect of pulsing_segments
+            'pulsing_segments': True,  # ON
+            'solid_with_dashes': True  # ON (sub-effect of pulsing_segments)
         }
         
-        # Update slider and UI positions based on actual screen size
+        # Hardcoded effect values (no sliders)
+        self.thickness_multiplier = 3.7  # 3.7x thickness
+        self.dash_gap_multiplier = 0.3   # 0.3x dash gap
+        self.dash_speed_multiplier = 4.9 # 4.9x dash speed
+        self.vibrance_multiplier = 1.1   # 1.1x vibrance
+        
+        # Update slider positions based on actual screen size
         self.slider_y = self.screen_height - 80
         self.slider_x = 50
         self.slider_width = self.screen_width - 100
         
-        # Update slider positions for right side controls
-        self.thickness_slider_x = self.screen_width - 320
-        self.dash_gap_slider_x = self.screen_width - 320
-        self.dash_speed_slider_x = self.screen_width - 320
-        self.vibrance_slider_x = self.screen_width - 320
-        
-        # Checkbox properties
-        self.checkbox_size = 20
-        self.checkbox_spacing = 35
-        self.checkbox_x = self.screen_width - 280
-        self.checkbox_y = 80
-        
     def get_thickness_multiplier(self):
-        """Convert thickness slider value to thickness multiplier (0.5 to 5.0)"""
-        return 0.5 + self.thickness_value * 4.5
+        """Return hardcoded thickness multiplier (3.7x)"""
+        return self.thickness_multiplier
     
     def get_dash_gap_multiplier(self):
-        """Convert dash gap slider value to gap multiplier (0.2 to 2.0)"""
-        return 0.2 + self.dash_gap_value * 1.8
+        """Return hardcoded dash gap multiplier (0.3x)"""
+        return self.dash_gap_multiplier
     
     def get_dash_speed_multiplier(self):
-        """Convert dash speed slider value to speed multiplier (0.1 to 10.0)"""
-        return 0.1 + self.dash_speed_value * 9.9
+        """Return hardcoded dash speed multiplier (4.9x)"""
+        return self.dash_speed_multiplier
     
     def get_vibrance_multiplier(self):
-        """Convert vibrance slider value to intensity multiplier (0.5 to 3.0)"""
-        return 0.5 + self.vibrance_value * 2.5
+        """Return hardcoded vibrance multiplier (1.1x)"""
+        return self.vibrance_multiplier
     
     def apply_vibrance(self, color):
-        """Apply vibrance multiplier to a color tuple"""
-        vibrance = self.get_vibrance_multiplier()
-        return tuple(min(255, int(c * vibrance)) for c in color)
+        """Apply hardcoded vibrance multiplier to a color tuple"""
+        return tuple(min(255, int(c * self.vibrance_multiplier)) for c in color)
         
     def handle_events(self):
         for event in pygame.event.get():
@@ -214,67 +149,20 @@ class OpticalFiberSimulation:
                 if event.button == 1:  # Left mouse button
                     mouse_x, mouse_y = event.pos
                     
-                    # Check if clicking on checkboxes first
-                    if self.check_checkbox_click(mouse_x, mouse_y):
-                        pass  # Checkbox was clicked and toggled
-                    # Check if clicking on vibrance slider
-                    elif (500 <= mouse_y <= 540 and
-                        self.vibrance_slider_x <= mouse_x <= self.vibrance_slider_x + 200):
-                        self.dragging_vibrance = True
-                        self.update_vibrance_slider(mouse_x)
-                    # Check if clicking on dash speed slider
-                    elif (440 <= mouse_y <= 480 and
-                        self.dash_speed_slider_x <= mouse_x <= self.dash_speed_slider_x + 200):
-                        self.dragging_dash_speed = True
-                        self.update_dash_speed_slider(mouse_x)
-                    # Check if clicking on dash gap slider
-                    elif (380 <= mouse_y <= 420 and
-                        self.dash_gap_slider_x <= mouse_x <= self.dash_gap_slider_x + 200):
-                        self.dragging_dash_gap = True
-                        self.update_dash_gap_slider(mouse_x)
-                    # Check if clicking on thickness slider
-                    elif (320 <= mouse_y <= 360 and
-                        self.thickness_slider_x <= mouse_x <= self.thickness_slider_x + 200):
-                        self.dragging_thickness = True
-                        self.update_thickness_slider(mouse_x)
-                    # Check if clicking on angle slider
-                    elif (self.slider_y <= mouse_y <= self.slider_y + 60 and
+                    # Check if clicking on angle slider only
+                    if (self.slider_y <= mouse_y <= self.slider_y + 60 and
                         self.slider_x <= mouse_x <= self.slider_x + self.slider_width):
                         self.dragging = True
                         self.update_slider(mouse_x)
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     self.dragging = False
-                    self.dragging_thickness = False
-                    self.dragging_dash_gap = False
-                    self.dragging_dash_speed = False
-                    self.dragging_vibrance = False
             elif event.type == pygame.MOUSEMOTION:
                 if self.dragging:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
                     if 0 <= mouse_x <= self.screen_width:
                         self.update_slider(mouse_x)
-                elif self.dragging_thickness:
-                    mouse_x, mouse_y = event.pos
-                    # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= self.screen_width:
-                        self.update_thickness_slider(mouse_x)
-                elif self.dragging_dash_gap:
-                    mouse_x, mouse_y = event.pos
-                    # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= self.screen_width:
-                        self.update_dash_gap_slider(mouse_x)
-                elif self.dragging_dash_speed:
-                    mouse_x, mouse_y = event.pos
-                    # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= self.screen_width:
-                        self.update_dash_speed_slider(mouse_x)
-                elif self.dragging_vibrance:
-                    mouse_x, mouse_y = event.pos
-                    # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= self.screen_width:
-                        self.update_vibrance_slider(mouse_x)
     
     def update_slider(self, mouse_x):
         # Calculate slider value based on mouse position with safety bounds
@@ -284,42 +172,6 @@ class OpticalFiberSimulation:
         except (ZeroDivisionError, TypeError):
             # Fallback to center position if calculation fails
             self.slider_value = 0.5
-    
-    def update_thickness_slider(self, mouse_x):
-        # Calculate thickness slider value based on mouse position with safety bounds
-        try:
-            relative_x = mouse_x - self.thickness_slider_x
-            self.thickness_value = max(0.0, min(1.0, relative_x / 200))
-        except (ZeroDivisionError, TypeError):
-            # Fallback to medium thickness if calculation fails
-            self.thickness_value = 0.5
-    
-    def update_dash_gap_slider(self, mouse_x):
-        # Calculate dash gap slider value based on mouse position with safety bounds
-        try:
-            relative_x = mouse_x - self.dash_gap_slider_x
-            self.dash_gap_value = max(0.0, min(1.0, relative_x / 200))
-        except (ZeroDivisionError, TypeError):
-            # Fallback to medium gap if calculation fails
-            self.dash_gap_value = 0.5
-    
-    def update_dash_speed_slider(self, mouse_x):
-        # Calculate dash speed slider value based on mouse position with safety bounds
-        try:
-            relative_x = mouse_x - self.dash_speed_slider_x
-            self.dash_speed_value = max(0.0, min(1.0, relative_x / 200))
-        except (ZeroDivisionError, TypeError):
-            # Fallback to medium speed if calculation fails
-            self.dash_speed_value = 0.5
-    
-    def update_vibrance_slider(self, mouse_x):
-        # Calculate vibrance slider value based on mouse position with safety bounds
-        try:
-            relative_x = mouse_x - self.vibrance_slider_x
-            self.vibrance_value = max(0.0, min(1.0, relative_x / 200))
-        except (ZeroDivisionError, TypeError):
-            # Fallback to medium vibrance if calculation fails
-            self.vibrance_value = 0.5
     
     def get_angle_from_slider(self):
         # Convert slider value to angle (-87 to +87 degrees)
@@ -803,72 +655,6 @@ class OpticalFiberSimulation:
         handle_x = self.slider_x + self.slider_value * self.slider_width - 10
         pygame.draw.rect(self.screen, WHITE, 
                         (handle_x, self.slider_y, 20, 60))
-        
-        # Draw angle text in upper right corner
-        angle_degrees = math.degrees(self.get_angle_from_slider())
-        angle_text = self.font.render(f"Angle: {angle_degrees:.1f}°", True, WHITE)
-        angle_rect = angle_text.get_rect()
-        self.screen.blit(angle_text, (self.screen_width - angle_rect.width - 20, 20))
-    
-    def draw_thickness_slider(self):
-        # Draw thickness slider track
-        pygame.draw.rect(self.screen, GRAY, 
-                        (THICKNESS_SLIDER_X, THICKNESS_SLIDER_Y + THICKNESS_SLIDER_HEIGHT//2 - 3, THICKNESS_SLIDER_WIDTH, 6))
-        
-        # Draw thickness slider handle
-        handle_x = THICKNESS_SLIDER_X + self.thickness_value * THICKNESS_SLIDER_WIDTH - THICKNESS_SLIDER_HANDLE_WIDTH // 2
-        pygame.draw.rect(self.screen, WHITE, 
-                        (handle_x, THICKNESS_SLIDER_Y, THICKNESS_SLIDER_HANDLE_WIDTH, THICKNESS_SLIDER_HEIGHT))
-        
-        # Draw thickness label and value
-        thickness_multiplier = self.get_thickness_multiplier()
-        thickness_text = self.small_font.render(f"Laser Thickness: {thickness_multiplier:.1f}x", True, WHITE)
-        self.screen.blit(thickness_text, (THICKNESS_SLIDER_X, THICKNESS_SLIDER_Y - 25))
-    
-    def draw_dash_gap_slider(self):
-        # Draw dash gap slider track
-        pygame.draw.rect(self.screen, GRAY, 
-                        (DASH_GAP_SLIDER_X, DASH_GAP_SLIDER_Y + DASH_GAP_SLIDER_HEIGHT//2 - 3, DASH_GAP_SLIDER_WIDTH, 6))
-        
-        # Draw dash gap slider handle
-        handle_x = DASH_GAP_SLIDER_X + self.dash_gap_value * DASH_GAP_SLIDER_WIDTH - DASH_GAP_SLIDER_HANDLE_WIDTH // 2
-        pygame.draw.rect(self.screen, WHITE, 
-                        (handle_x, DASH_GAP_SLIDER_Y, DASH_GAP_SLIDER_HANDLE_WIDTH, DASH_GAP_SLIDER_HEIGHT))
-        
-        # Draw dash gap label and value
-        gap_multiplier = self.get_dash_gap_multiplier()
-        gap_text = self.small_font.render(f"Dash Gap Size: {gap_multiplier:.1f}x", True, WHITE)
-        self.screen.blit(gap_text, (DASH_GAP_SLIDER_X, DASH_GAP_SLIDER_Y - 25))
-    
-    def draw_dash_speed_slider(self):
-        # Draw dash speed slider track
-        pygame.draw.rect(self.screen, GRAY, 
-                        (DASH_SPEED_SLIDER_X, DASH_SPEED_SLIDER_Y + DASH_SPEED_SLIDER_HEIGHT//2 - 3, DASH_SPEED_SLIDER_WIDTH, 6))
-        
-        # Draw dash speed slider handle
-        handle_x = DASH_SPEED_SLIDER_X + self.dash_speed_value * DASH_SPEED_SLIDER_WIDTH - DASH_SPEED_SLIDER_HANDLE_WIDTH // 2
-        pygame.draw.rect(self.screen, WHITE, 
-                        (handle_x, DASH_SPEED_SLIDER_Y, DASH_SPEED_SLIDER_HANDLE_WIDTH, DASH_SPEED_SLIDER_HEIGHT))
-        
-        # Draw dash speed label and value
-        speed_multiplier = self.get_dash_speed_multiplier()
-        speed_text = self.small_font.render(f"Dash Speed: {speed_multiplier:.1f}x", True, WHITE)
-        self.screen.blit(speed_text, (DASH_SPEED_SLIDER_X, DASH_SPEED_SLIDER_Y - 25))
-    
-    def draw_vibrance_slider(self):
-        # Draw vibrance slider track
-        pygame.draw.rect(self.screen, GRAY, 
-                        (VIBRANCE_SLIDER_X, VIBRANCE_SLIDER_Y + VIBRANCE_SLIDER_HEIGHT//2 - 3, VIBRANCE_SLIDER_WIDTH, 6))
-        
-        # Draw vibrance slider handle
-        handle_x = VIBRANCE_SLIDER_X + self.vibrance_value * VIBRANCE_SLIDER_WIDTH - VIBRANCE_SLIDER_HANDLE_WIDTH // 2
-        pygame.draw.rect(self.screen, WHITE, 
-                        (handle_x, VIBRANCE_SLIDER_Y, VIBRANCE_SLIDER_HANDLE_WIDTH, VIBRANCE_SLIDER_HEIGHT))
-        
-        # Draw vibrance label and value
-        vibrance_multiplier = self.get_vibrance_multiplier()
-        vibrance_text = self.small_font.render(f"Vibrance: {vibrance_multiplier:.1f}x", True, WHITE)
-        self.screen.blit(vibrance_text, (VIBRANCE_SLIDER_X, VIBRANCE_SLIDER_Y - 25))
     
     def draw_fiber(self):
         # No longer drawing fiber walls - laser extends to full screen edges
@@ -948,13 +734,6 @@ class OpticalFiberSimulation:
                 # Simple circle
                 simple_bounce_color = self.apply_vibrance(bounce_color)
                 pygame.draw.circle(self.screen, simple_bounce_color, (int(bounce_pos[0]), int(bounce_pos[1])), 3)
-            
-            # Draw angle of incidence text near first few bounces
-            if i < 3:  # Show only first 3 bounces to avoid clutter
-                angle_text = self.small_font.render(f"{incident_angle:.1f}°", True, WHITE)
-                text_x = int(bounce_pos[0]) + 15
-                text_y = int(bounce_pos[1]) - 25
-                self.screen.blit(angle_text, (text_x, text_y))
         
         # Enhanced starting point (laser source)
         start_pos = path_points[0]
@@ -1005,165 +784,15 @@ class OpticalFiberSimulation:
                 pygame.draw.circle(self.screen, self.apply_vibrance(light_color), (int(end_point[0]), int(end_point[1])), 5)
     
     def draw_info(self, total_distance, bounce_angles):
-        # Calculate shortest path (straight line)
-        shortest_distance = FIBER_RIGHT - FIBER_LEFT
-        efficiency = (shortest_distance / total_distance) * 100 if total_distance > 0 else 100
-        
-        # TIR analysis
-        current_angle = abs(math.degrees(self.get_angle_from_slider()))
-        tir_status = "EXCELLENT" if current_angle < CRITICAL_ANGLE else "MARGINAL" if current_angle < CRITICAL_ANGLE + 10 else "POOR"
-        avg_incident_angle = sum(bounce_angles) / len(bounce_angles) if bounce_angles else 0
-        
-        # Draw information panel
-        info_y = 10
-        
-        title_text = self.font.render("Optical Fiber Light Path Simulation", True, WHITE)
-        self.screen.blit(title_text, (10, info_y))
-        info_y += 40
-        
-        # TIR Status
-        tir_color = GREEN if tir_status == "EXCELLENT" else YELLOW if tir_status == "MARGINAL" else ORANGE
-        tir_text = self.small_font.render(f"TIR Quality: {tir_status}", True, tir_color)
-        self.screen.blit(tir_text, (10, info_y))
-        info_y += 25
-        
-        critical_text = self.small_font.render(f"Critical Angle: {CRITICAL_ANGLE}° (for reference)", True, LIGHT_GRAY)
-        self.screen.blit(critical_text, (10, info_y))
-        info_y += 25
-        
-        if bounce_angles:
-            avg_angle_text = self.small_font.render(f"Avg Incident Angle: {avg_incident_angle:.1f}°", True, WHITE)
-            self.screen.blit(avg_angle_text, (10, info_y))
-            info_y += 25
-        
-        distance_text = self.small_font.render(f"Light Path Distance: {total_distance:.1f} pixels", True, WHITE)
-        self.screen.blit(distance_text, (10, info_y))
-        info_y += 25
-        
-        shortest_text = self.small_font.render(f"Shortest Path: {shortest_distance:.1f} pixels", True, WHITE)
-        self.screen.blit(shortest_text, (10, info_y))
-        info_y += 25
-        
-        efficiency_text = self.small_font.render(f"Efficiency: {efficiency:.1f}%", True, WHITE)
-        self.screen.blit(efficiency_text, (10, info_y))
-        info_y += 25
-        
-        bounces = len([i for i in range(1, len(self.current_path) - 1) 
-                      if (self.current_path[i][1] <= FIBER_TOP + 2 or 
-                          self.current_path[i][1] >= FIBER_BOTTOM - 2)]) if hasattr(self, 'current_path') else 0
-        
-        bounce_text = self.small_font.render(f"Wall Bounces: {bounces}", True, WHITE)
-        self.screen.blit(bounce_text, (10, info_y))
-        
-        # Enhanced Instructions
-        instructions = [
-            "Move angle slider to change light entry angle",
-            "Use thickness slider to adjust laser beam width",
-            "Click checkboxes to toggle visual effects",
-            "GREEN: Excellent TIR | YELLOW: Marginal | ORANGE: Poor",
-            "Numbers show angle of incidence at bounce points",
-            "F11: Toggle fullscreen | ESC: Exit"
-        ]
-        
-        # Add encoder status if available
-        if PHIDGETS_AVAILABLE:
-            encoder_status = "Encoder: CONNECTED" if self.encoder_enabled else "Encoder: DISCONNECTED"
-            instructions.append(encoder_status)
-        
-        for i, instruction in enumerate(instructions):
-            inst_text = self.small_font.render(instruction, True, LIGHT_GRAY)
-            self.screen.blit(inst_text, (10, SCREEN_HEIGHT - 140 + i * 25))
+        # Remove all text information display for minimal version
+        pass
     
     def draw_checkboxes(self):
-        """Draw interactive checkboxes for effect toggles"""
-        checkbox_labels = [
-            ('gradient_glow', 'Gradient/Glow Effect'),
-            ('animated_properties', 'Animated Properties'),
-            ('laser_core_halo', 'Laser Core & Halo'),
-            ('particle_effects', 'Particle Effects'),
-            ('pulsing_segments', 'Pulsing Segments'),
-            ('solid_with_dashes', '  └ Solid + Dashes')  # Sub-effect with indentation
-        ]
-        
-        # Draw title
-        title_text = self.checkbox_font.render("Visual Effects:", True, WHITE)
-        self.screen.blit(title_text, (self.checkbox_x, self.checkbox_y - 30))
-        
-        for i, (effect_key, label) in enumerate(checkbox_labels):
-            y_pos = self.checkbox_y + i * self.checkbox_spacing
-            
-            # Special handling for sub-effect
-            is_sub_effect = effect_key == 'solid_with_dashes'
-            checkbox_x = self.checkbox_x + (20 if is_sub_effect else 0)  # Indent sub-effect
-            
-            # Gray out sub-effect if parent effect is disabled
-            if is_sub_effect and not self.effect_toggles['pulsing_segments']:
-                checkbox_color = GRAY
-                label_color = GRAY
-                is_enabled = False
-            else:
-                checkbox_color = WHITE
-                label_color = WHITE
-                is_enabled = self.effect_toggles[effect_key]
-            
-            # Draw checkbox border
-            checkbox_rect = pygame.Rect(checkbox_x, y_pos, self.checkbox_size, self.checkbox_size)
-            pygame.draw.rect(self.screen, checkbox_color, checkbox_rect, 2)
-            
-            # Fill checkbox if effect is enabled
-            if is_enabled:
-                # Draw checkmark
-                inner_rect = pygame.Rect(checkbox_x + 3, y_pos + 3, 
-                                       self.checkbox_size - 6, self.checkbox_size - 6)
-                pygame.draw.rect(self.screen, GREEN, inner_rect)
-                
-                # Draw checkmark symbol
-                check_points = [
-                    (checkbox_x + 5, y_pos + 10),
-                    (checkbox_x + 8, y_pos + 13),
-                    (checkbox_x + 15, y_pos + 6)
-                ]
-                pygame.draw.lines(self.screen, WHITE, False, check_points, 2)
-            
-            # Draw label
-            label_text = self.checkbox_font.render(label, True, label_color)
-            label_x = checkbox_x + self.checkbox_size + 10
-            self.screen.blit(label_text, (label_x, y_pos - 2))
+        # Remove all checkboxes for minimal version
+        pass
     
     def check_checkbox_click(self, mouse_x, mouse_y):
-        """Check if a checkbox was clicked and toggle the effect"""
-        checkbox_labels = [
-            'gradient_glow',
-            'animated_properties', 
-            'laser_core_halo',
-            'particle_effects',
-            'pulsing_segments',
-            'solid_with_dashes'
-        ]
-        
-        for i, effect_key in enumerate(checkbox_labels):
-            y_pos = self.checkbox_y + i * self.checkbox_spacing
-            
-            # Special handling for sub-effect positioning
-            checkbox_x = self.checkbox_x + (20 if effect_key == 'solid_with_dashes' else 0)
-            checkbox_rect = pygame.Rect(checkbox_x, y_pos, self.checkbox_size, self.checkbox_size)
-            
-            if checkbox_rect.collidepoint(mouse_x, mouse_y):
-                # Special logic for sub-effects
-                if effect_key == 'solid_with_dashes':
-                    # Only allow toggling if parent effect is enabled
-                    if self.effect_toggles['pulsing_segments']:
-                        self.effect_toggles[effect_key] = not self.effect_toggles[effect_key]
-                elif effect_key == 'pulsing_segments':
-                    # If disabling pulsing segments, also disable sub-effects
-                    self.effect_toggles[effect_key] = not self.effect_toggles[effect_key]
-                    if not self.effect_toggles[effect_key]:
-                        self.effect_toggles['solid_with_dashes'] = False
-                else:
-                    # Normal toggle for other effects
-                    self.effect_toggles[effect_key] = not self.effect_toggles[effect_key]
-                return True
-        
+        # Remove checkbox functionality for minimal version
         return False
     
     def apply_encoder_movement(self, movement):
@@ -1181,9 +810,9 @@ class OpticalFiberSimulation:
             # Update slider from encoder input
             self.update_slider_from_encoder()
             
-            # Update global dash offset for continuous dashed line animation
+            # Update global dash offset for continuous dashed line animation (hardcoded speed 4.9x)
             if self.effect_toggles['animated_properties'] and self.effect_toggles['pulsing_segments']:
-                self.global_dash_offset += 2.5 * self.get_dash_speed_multiplier()  # Speed controlled by slider
+                self.global_dash_offset += 2.5 * self.dash_speed_multiplier  # Using hardcoded speed
             
             self.handle_events()
             
@@ -1194,16 +823,10 @@ class OpticalFiberSimulation:
             # Clear screen
             self.screen.fill(BLACK)
             
-            # Draw everything
+            # Draw everything - minimal version with only laser and angle slider
             self.draw_fiber()
             self.draw_light_path(path_points, total_distance, bounce_angles, bounce_positions)
             self.draw_slider()
-            self.draw_thickness_slider()
-            self.draw_dash_gap_slider()
-            self.draw_dash_speed_slider()
-            self.draw_vibrance_slider()
-            self.draw_info(total_distance, bounce_angles)
-            self.draw_checkboxes()
             
             # Update display
             pygame.display.flip()
