@@ -5,10 +5,10 @@ import sys
 # Initialize Pygame
 pygame.init()
 
-# Get screen dimensions for dual monitor setup
+# Get screen dimensions for single ultra-wide monitor
 info = pygame.display.Info()
-# For dual monitors, we want the total width of both screens
-SCREEN_WIDTH = info.current_w * 2  # Assuming two monitors of equal width
+# Use the actual screen dimensions (single ultra-wide monitor)
+SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 
 # Colors
@@ -70,14 +70,14 @@ FIBER_HEIGHT = FIBER_BOTTOM - FIBER_TOP
 
 class OpticalFiberSimulation:
     def __init__(self):
-        # Create display spanning both monitors
-        # Position the window at the left edge of the primary monitor
+        # Create display for single ultra-wide monitor
+        # Center the window on the screen
         import os
-        os.environ['SDL_VIDEO_WINDOW_POS'] = '0,0'
+        os.environ['SDL_VIDEO_WINDOW_POS'] = 'centered'
         
-        # Create a window that spans both monitors
+        # Create a window that uses the full screen
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME)
-        pygame.display.set_caption("Optical Fiber Light Path Simulation - Dual Monitor")
+        pygame.display.set_caption("Optical Fiber Light Path Simulation - Ultra-Wide Monitor")
         
         self.clock = pygame.time.Clock()
         self.running = True
