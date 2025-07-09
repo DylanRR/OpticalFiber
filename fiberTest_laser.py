@@ -61,23 +61,26 @@ VIBRANCE_SLIDER_X = SCREEN_WIDTH - 320
 VIBRANCE_SLIDER_Y = 500
 VIBRANCE_SLIDER_HANDLE_WIDTH = 15
 
-# Fiber dimensions (the main area where light travels)
-FIBER_TOP = 50
-FIBER_BOTTOM = SLIDER_Y - 50
-FIBER_LEFT = 50
-FIBER_RIGHT = SCREEN_WIDTH - 50
+# Fiber dimensions (the main area where light travels) - now full screen
+FIBER_TOP = 0
+FIBER_BOTTOM = SCREEN_HEIGHT
+FIBER_LEFT = 0
+FIBER_RIGHT = SCREEN_WIDTH
 FIBER_HEIGHT = FIBER_BOTTOM - FIBER_TOP
 
 class OpticalFiberSimulation:
     def __init__(self):
-        # Create display for single ultra-wide monitor
-        # Center the window on the screen
+        # Create fullscreen display for single ultra-wide monitor
+        # For Unix systems, use fullscreen mode
         import os
-        os.environ['SDL_VIDEO_WINDOW_POS'] = 'centered'
         
-        # Create a window that uses the full screen
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME)
+        # Create a fullscreen window
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption("Optical Fiber Light Path Simulation - Ultra-Wide Monitor")
+        
+        # Get actual screen dimensions after setting fullscreen
+        self.screen_width = self.screen.get_width()
+        self.screen_height = self.screen.get_height()
         
         self.clock = pygame.time.Clock()
         self.running = True
@@ -124,10 +127,21 @@ class OpticalFiberSimulation:
             'solid_with_dashes': False  # Sub-effect of pulsing_segments
         }
         
+        # Update slider and UI positions based on actual screen size
+        self.slider_y = self.screen_height - 80
+        self.slider_x = 50
+        self.slider_width = self.screen_width - 100
+        
+        # Update slider positions for right side controls
+        self.thickness_slider_x = self.screen_width - 320
+        self.dash_gap_slider_x = self.screen_width - 320
+        self.dash_speed_slider_x = self.screen_width - 320
+        self.vibrance_slider_x = self.screen_width - 320
+        
         # Checkbox properties
         self.checkbox_size = 20
         self.checkbox_spacing = 35
-        self.checkbox_x = SCREEN_WIDTH - 280
+        self.checkbox_x = self.screen_width - 280
         self.checkbox_y = 80
         
     def get_thickness_multiplier(self):
@@ -173,28 +187,28 @@ class OpticalFiberSimulation:
                     if self.check_checkbox_click(mouse_x, mouse_y):
                         pass  # Checkbox was clicked and toggled
                     # Check if clicking on vibrance slider
-                    elif (VIBRANCE_SLIDER_Y <= mouse_y <= VIBRANCE_SLIDER_Y + VIBRANCE_SLIDER_HEIGHT and
-                        VIBRANCE_SLIDER_X <= mouse_x <= VIBRANCE_SLIDER_X + VIBRANCE_SLIDER_WIDTH):
+                    elif (500 <= mouse_y <= 540 and
+                        self.vibrance_slider_x <= mouse_x <= self.vibrance_slider_x + 200):
                         self.dragging_vibrance = True
                         self.update_vibrance_slider(mouse_x)
                     # Check if clicking on dash speed slider
-                    elif (DASH_SPEED_SLIDER_Y <= mouse_y <= DASH_SPEED_SLIDER_Y + DASH_SPEED_SLIDER_HEIGHT and
-                        DASH_SPEED_SLIDER_X <= mouse_x <= DASH_SPEED_SLIDER_X + DASH_SPEED_SLIDER_WIDTH):
+                    elif (440 <= mouse_y <= 480 and
+                        self.dash_speed_slider_x <= mouse_x <= self.dash_speed_slider_x + 200):
                         self.dragging_dash_speed = True
                         self.update_dash_speed_slider(mouse_x)
                     # Check if clicking on dash gap slider
-                    elif (DASH_GAP_SLIDER_Y <= mouse_y <= DASH_GAP_SLIDER_Y + DASH_GAP_SLIDER_HEIGHT and
-                        DASH_GAP_SLIDER_X <= mouse_x <= DASH_GAP_SLIDER_X + DASH_GAP_SLIDER_WIDTH):
+                    elif (380 <= mouse_y <= 420 and
+                        self.dash_gap_slider_x <= mouse_x <= self.dash_gap_slider_x + 200):
                         self.dragging_dash_gap = True
                         self.update_dash_gap_slider(mouse_x)
                     # Check if clicking on thickness slider
-                    elif (THICKNESS_SLIDER_Y <= mouse_y <= THICKNESS_SLIDER_Y + THICKNESS_SLIDER_HEIGHT and
-                        THICKNESS_SLIDER_X <= mouse_x <= THICKNESS_SLIDER_X + THICKNESS_SLIDER_WIDTH):
+                    elif (320 <= mouse_y <= 360 and
+                        self.thickness_slider_x <= mouse_x <= self.thickness_slider_x + 200):
                         self.dragging_thickness = True
                         self.update_thickness_slider(mouse_x)
                     # Check if clicking on angle slider
-                    elif (SLIDER_Y <= mouse_y <= SLIDER_Y + SLIDER_HEIGHT and
-                        SLIDER_X <= mouse_x <= SLIDER_X + SLIDER_WIDTH):
+                    elif (self.slider_y <= mouse_y <= self.slider_y + 60 and
+                        self.slider_x <= mouse_x <= self.slider_x + self.slider_width):
                         self.dragging = True
                         self.update_slider(mouse_x)
             elif event.type == pygame.MOUSEBUTTONUP:
@@ -208,34 +222,34 @@ class OpticalFiberSimulation:
                 if self.dragging:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= SCREEN_WIDTH:
+                    if 0 <= mouse_x <= self.screen_width:
                         self.update_slider(mouse_x)
                 elif self.dragging_thickness:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= SCREEN_WIDTH:
+                    if 0 <= mouse_x <= self.screen_width:
                         self.update_thickness_slider(mouse_x)
                 elif self.dragging_dash_gap:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= SCREEN_WIDTH:
+                    if 0 <= mouse_x <= self.screen_width:
                         self.update_dash_gap_slider(mouse_x)
                 elif self.dragging_dash_speed:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= SCREEN_WIDTH:
+                    if 0 <= mouse_x <= self.screen_width:
                         self.update_dash_speed_slider(mouse_x)
                 elif self.dragging_vibrance:
                     mouse_x, mouse_y = event.pos
                     # Only update if mouse is still in reasonable range
-                    if 0 <= mouse_x <= SCREEN_WIDTH:
+                    if 0 <= mouse_x <= self.screen_width:
                         self.update_vibrance_slider(mouse_x)
     
     def update_slider(self, mouse_x):
         # Calculate slider value based on mouse position with safety bounds
         try:
-            relative_x = mouse_x - SLIDER_X
-            self.slider_value = max(0.0, min(1.0, relative_x / SLIDER_WIDTH))
+            relative_x = mouse_x - self.slider_x
+            self.slider_value = max(0.0, min(1.0, relative_x / self.slider_width))
         except (ZeroDivisionError, TypeError):
             # Fallback to center position if calculation fails
             self.slider_value = 0.5
@@ -243,8 +257,8 @@ class OpticalFiberSimulation:
     def update_thickness_slider(self, mouse_x):
         # Calculate thickness slider value based on mouse position with safety bounds
         try:
-            relative_x = mouse_x - THICKNESS_SLIDER_X
-            self.thickness_value = max(0.0, min(1.0, relative_x / THICKNESS_SLIDER_WIDTH))
+            relative_x = mouse_x - self.thickness_slider_x
+            self.thickness_value = max(0.0, min(1.0, relative_x / 200))
         except (ZeroDivisionError, TypeError):
             # Fallback to medium thickness if calculation fails
             self.thickness_value = 0.5
@@ -252,8 +266,8 @@ class OpticalFiberSimulation:
     def update_dash_gap_slider(self, mouse_x):
         # Calculate dash gap slider value based on mouse position with safety bounds
         try:
-            relative_x = mouse_x - DASH_GAP_SLIDER_X
-            self.dash_gap_value = max(0.0, min(1.0, relative_x / DASH_GAP_SLIDER_WIDTH))
+            relative_x = mouse_x - self.dash_gap_slider_x
+            self.dash_gap_value = max(0.0, min(1.0, relative_x / 200))
         except (ZeroDivisionError, TypeError):
             # Fallback to medium gap if calculation fails
             self.dash_gap_value = 0.5
@@ -261,8 +275,8 @@ class OpticalFiberSimulation:
     def update_dash_speed_slider(self, mouse_x):
         # Calculate dash speed slider value based on mouse position with safety bounds
         try:
-            relative_x = mouse_x - DASH_SPEED_SLIDER_X
-            self.dash_speed_value = max(0.0, min(1.0, relative_x / DASH_SPEED_SLIDER_WIDTH))
+            relative_x = mouse_x - self.dash_speed_slider_x
+            self.dash_speed_value = max(0.0, min(1.0, relative_x / 200))
         except (ZeroDivisionError, TypeError):
             # Fallback to medium speed if calculation fails
             self.dash_speed_value = 0.5
@@ -270,8 +284,8 @@ class OpticalFiberSimulation:
     def update_vibrance_slider(self, mouse_x):
         # Calculate vibrance slider value based on mouse position with safety bounds
         try:
-            relative_x = mouse_x - VIBRANCE_SLIDER_X
-            self.vibrance_value = max(0.0, min(1.0, relative_x / VIBRANCE_SLIDER_WIDTH))
+            relative_x = mouse_x - self.vibrance_slider_x
+            self.vibrance_value = max(0.0, min(1.0, relative_x / 200))
         except (ZeroDivisionError, TypeError):
             # Fallback to medium vibrance if calculation fails
             self.vibrance_value = 0.5
@@ -283,9 +297,9 @@ class OpticalFiberSimulation:
         return math.radians(angle_degrees)
     
     def calculate_light_path(self):
-        # Starting point (left side of fiber, middle height)
-        start_x = FIBER_LEFT
-        start_y = FIBER_TOP + FIBER_HEIGHT // 2
+        # Starting point (left side of screen, middle height)
+        start_x = 0
+        start_y = self.screen_height // 2
         
         # Initial direction based on angle
         angle = self.get_angle_from_slider()
@@ -301,30 +315,30 @@ class OpticalFiberSimulation:
         step_size = 2.0  # Smaller steps for smoother path
         total_distance = 0
         
-        while current_x < FIBER_RIGHT:
+        while current_x < self.screen_width:
             # Move one step
             next_x = current_x + dx * step_size
             next_y = current_y + dy * step_size
             
             # Check for bounces off top and bottom walls
-            if next_y <= FIBER_TOP:
+            if next_y <= 0:
                 # Bounce off top wall
-                next_y = FIBER_TOP + (FIBER_TOP - next_y)
+                next_y = 0 + (0 - next_y)
                 
                 # Calculate angle of incidence (angle between ray and normal to surface)
                 incident_angle = math.degrees(math.atan2(abs(dy), abs(dx)))
                 bounce_angles.append(incident_angle)
-                bounce_positions.append((current_x, FIBER_TOP))
+                bounce_positions.append((current_x, 0))
                 
                 dy = -dy  # Reverse vertical direction
-            elif next_y >= FIBER_BOTTOM:
+            elif next_y >= self.screen_height:
                 # Bounce off bottom wall
-                next_y = FIBER_BOTTOM - (next_y - FIBER_BOTTOM)
+                next_y = self.screen_height - (next_y - self.screen_height)
                 
                 # Calculate angle of incidence
                 incident_angle = math.degrees(math.atan2(abs(dy), abs(dx)))
                 bounce_angles.append(incident_angle)
-                bounce_positions.append((current_x, FIBER_BOTTOM))
+                bounce_positions.append((current_x, self.screen_height))
                 
                 dy = -dy  # Reverse vertical direction
             
@@ -603,18 +617,18 @@ class OpticalFiberSimulation:
     def draw_slider(self):
         # Draw slider track
         pygame.draw.rect(self.screen, GRAY, 
-                        (SLIDER_X, SLIDER_Y + SLIDER_HEIGHT//2 - 5, SLIDER_WIDTH, 10))
+                        (self.slider_x, self.slider_y + 30 - 5, self.slider_width, 10))
         
         # Draw slider handle
-        handle_x = SLIDER_X + self.slider_value * SLIDER_WIDTH - SLIDER_HANDLE_WIDTH // 2
+        handle_x = self.slider_x + self.slider_value * self.slider_width - 10
         pygame.draw.rect(self.screen, WHITE, 
-                        (handle_x, SLIDER_Y, SLIDER_HANDLE_WIDTH, SLIDER_HEIGHT))
+                        (handle_x, self.slider_y, 20, 60))
         
         # Draw angle text in upper right corner
         angle_degrees = math.degrees(self.get_angle_from_slider())
         angle_text = self.font.render(f"Angle: {angle_degrees:.1f}°", True, WHITE)
         angle_rect = angle_text.get_rect()
-        self.screen.blit(angle_text, (SCREEN_WIDTH - angle_rect.width - 20, 20))
+        self.screen.blit(angle_text, (self.screen_width - angle_rect.width - 20, 20))
     
     def draw_thickness_slider(self):
         # Draw thickness slider track
@@ -677,19 +691,8 @@ class OpticalFiberSimulation:
         self.screen.blit(vibrance_text, (VIBRANCE_SLIDER_X, VIBRANCE_SLIDER_Y - 25))
     
     def draw_fiber(self):
-        # Draw fiber walls (top and bottom)
-        pygame.draw.line(self.screen, WHITE, (FIBER_LEFT, FIBER_TOP), (FIBER_RIGHT, FIBER_TOP), 3)
-        pygame.draw.line(self.screen, WHITE, (FIBER_LEFT, FIBER_BOTTOM), (FIBER_RIGHT, FIBER_BOTTOM), 3)
-        
-        # Draw fiber sides
-        pygame.draw.line(self.screen, WHITE, (FIBER_LEFT, FIBER_TOP), (FIBER_LEFT, FIBER_BOTTOM), 3)
-        pygame.draw.line(self.screen, WHITE, (FIBER_RIGHT, FIBER_TOP), (FIBER_RIGHT, FIBER_BOTTOM), 3)
-        
-        # Fill fiber area with slight transparency
-        fiber_surface = pygame.Surface((FIBER_RIGHT - FIBER_LEFT, FIBER_BOTTOM - FIBER_TOP))
-        fiber_surface.set_alpha(30)
-        fiber_surface.fill(BLUE)
-        self.screen.blit(fiber_surface, (FIBER_LEFT, FIBER_TOP))
+        # No longer drawing fiber walls - laser extends to full screen edges
+        pass
     
     def draw_light_path(self, path_points, total_distance, bounce_angles, bounce_positions):
         if len(path_points) < 2:
