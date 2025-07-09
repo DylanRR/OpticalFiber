@@ -71,7 +71,11 @@ class OpticalFiberSimulation:
         self.encoder_thread = None
         self.encoder_device = None
         self.encoder_lock = threading.Lock()
-        self.encoder_sensitivity = 0.001  # Simple sensitivity multiplier for smooth movement
+        self.encoder_sensitivity = 0.0001  # Much smaller sensitivity for slower, smoother movement
+        
+        # Smoothing for visual fluidity
+        self.target_slider_value = 0.5  # Target value the slider is moving towards
+        self.smoothing_factor = 0.15    # How fast the slider catches up to target (0.1 = smooth, 0.5 = fast)
         
         # Initialize encoder if available
         if PHIDGETS_AVAILABLE:
@@ -363,18 +367,18 @@ class OpticalFiberSimulation:
             self.encoder_device = None
     
     def on_encoder_position_change(self, encoder, positionChange, timeChange, indexTriggered):
-        """Handle encoder position changes - simple and direct"""
+        """Handle encoder position changes - updates target value for smooth visual movement"""
         try:
             # Only process if we're not manually dragging the slider
             if self.dragging:
                 return
                 
             with self.encoder_lock:
-                # Direct, simple movement calculation
+                # Direct movement calculation updates the target value
                 movement = positionChange * self.encoder_sensitivity
                 
-                # Apply movement directly to slider
-                self.slider_value = max(0.0, min(1.0, self.slider_value + movement))
+                # Update target value (the actual slider will smoothly follow)
+                self.target_slider_value = max(0.0, min(1.0, self.target_slider_value + movement))
                     
         except Exception as e:
             print(f"Error in encoder position change handler: {e}")
@@ -533,7 +537,20 @@ class OpticalFiberSimulation:
             # Update animation time
             self.time += 1
             
-            # Update slider from encoder input
+            # Smooth slider movement towards target (for encoder smoothing)
+            if not self.dragging:
+                # Smoothly interpolate slider towards target value
+                diff = self.target_slider_value - self.slider_value
+                self.slider_value += diff * self.smoothing_factor
+                
+                # Snap to target if very close to avoid endless tiny movements
+                if abs(diff) < 0.001:
+                    self.slider_value = self.target_slider_value
+            else:
+                # When dragging, keep target in sync with actual slider
+                self.target_slider_value = self.slider_value
+            
+            # Update slider from encoder input (now just a placeholder)
             self.update_slider_from_encoder()
             
             # Update global dash offset for continuous dashed line animation (always animated for pulsing)
