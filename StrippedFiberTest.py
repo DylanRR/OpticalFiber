@@ -88,14 +88,11 @@ class OpticalFiberSimulation:
         # Global animation offset for continuous dashed line effect
         self.global_dash_offset = 0
         
-        # HARDCODED EFFECT SETTINGS - No UI controls needed
+        # HARDCODED EFFECT SETTINGS - Minimal effects only
         # pulsing segments ON, solid+dashed line ON, line thickness 3.7x, 
         # dash gap 0.3x, dash speed 4.9x, vibrance 1.1x
+        # Animation is always enabled for pulsing to work properly
         self.effect_toggles = {
-            'gradient_glow': True,
-            'animated_properties': True,
-            'laser_core_halo': True,
-            'particle_effects': True,
             'pulsing_segments': True,  # ON
             'solid_with_dashes': True  # ON (sub-effect of pulsing_segments)
         }
@@ -240,132 +237,36 @@ class OpticalFiberSimulation:
         return path_points, total_distance, bounce_angles, bounce_positions
     
     def draw_laser_beam(self, start_pos, end_pos, base_color, intensity=1.0):
-        """Draw a realistic laser beam with glow effect"""
+        """Draw a simple laser beam without effects (for fallback when pulsing segments disabled)"""
         if start_pos == end_pos:
             return
             
         # Calculate beam properties
-        beam_length = math.sqrt((end_pos[0] - start_pos[0])**2 + (end_pos[1] - start_pos[1])**2)
         thickness_multiplier = self.get_thickness_multiplier()
         
-        # Pulsing effect based on time (only if animated properties are enabled)
-        if self.effect_toggles['animated_properties']:
-            pulse = 0.8 + 0.2 * math.sin(self.time * 0.1) * intensity
-        else:
-            pulse = 1.0 * intensity
+        # Simple pulsing effect (always enabled for animation)
+        pulse = 0.8 + 0.2 * math.sin(self.time * 0.1) * intensity
         
-        # Core laser colors (bright white/colored core)
-        if self.effect_toggles['laser_core_halo']:
-            core_color = (min(255, int(255 * pulse)), min(255, int(255 * pulse)), min(255, int(255 * pulse)))
-            core_color = self.apply_vibrance(core_color)
-        else:
-            # Simple colored line if core/halo is disabled
-            core_color = self.apply_vibrance(base_color)
+        # Apply vibrance to color
+        vibrant_color = self.apply_vibrance(base_color)
         
-        # Check if pulsing segments are enabled
-        if self.effect_toggles['pulsing_segments']:
-            # This should not be called directly anymore - handled in draw_light_path
-            pass
-        else:
-            self.draw_solid_beam(start_pos, end_pos, base_color, core_color, thickness_multiplier, pulse, beam_length)
+        # Draw simple thick line
+        pygame.draw.line(self.screen, vibrant_color, start_pos, end_pos, max(1, int(3 * thickness_multiplier)))
     
     def draw_solid_beam(self, start_pos, end_pos, base_color, core_color, thickness_multiplier, pulse, beam_length):
-        """Draw a solid continuous laser beam"""
-        # Outer glow colors (based on TIR quality) - only if gradient/glow is enabled
-        if self.effect_toggles['gradient_glow']:
-            if base_color == GREEN:
-                glow_color = (0, min(255, int(150 * pulse)), 0)
-            elif base_color == YELLOW:
-                glow_color = (min(255, int(200 * pulse)), min(255, int(200 * pulse)), 0)
-            else:  # ORANGE/RED
-                glow_color = (min(255, int(200 * pulse)), min(255, int(100 * pulse)), 0)
-            
-            # Apply vibrance to glow colors
-            glow_color = self.apply_vibrance(glow_color)
-            
-            # Draw multiple layers for glow effect (from outer to inner)
-            # Outer glow (thickest, most transparent)
-            pygame.draw.line(self.screen, glow_color, start_pos, end_pos, int(12 * thickness_multiplier))
-            
-            # Middle glow
-            middle_color = tuple(min(255, int(c * 1.2)) for c in glow_color)
-            pygame.draw.line(self.screen, middle_color, start_pos, end_pos, int(8 * thickness_multiplier))
-            
-            # Inner glow
-            inner_color = tuple(min(255, int(c * 1.5)) for c in glow_color)
-            pygame.draw.line(self.screen, inner_color, start_pos, end_pos, int(5 * thickness_multiplier))
-        
-        # Draw the core beam
-        if self.effect_toggles['laser_core_halo']:
-            # Bright core (thinnest, brightest)
-            pygame.draw.line(self.screen, core_color, start_pos, end_pos, max(1, int(2 * thickness_multiplier)))
-        else:
-            # Simple line
-            simple_color = self.apply_vibrance(base_color)
-            pygame.draw.line(self.screen, simple_color, start_pos, end_pos, max(1, int(3 * thickness_multiplier)))
-        
-        # Add sparkle effects for extra realism (only if particle effects are enabled)
-        if self.effect_toggles['particle_effects'] and beam_length > 50:  # Only for longer segments
-            num_sparkles = max(1, int(beam_length / 100))
-            for i in range(num_sparkles):
-                # Random position along the beam
-                if self.effect_toggles['animated_properties']:
-                    t = (i + 0.5) / num_sparkles + 0.1 * math.sin(self.time * 0.3 + i)
-                else:
-                    t = (i + 0.5) / num_sparkles
-                t = max(0, min(1, t))
-                
-                sparkle_x = int(start_pos[0] + t * (end_pos[0] - start_pos[0]))
-                sparkle_y = int(start_pos[1] + t * (end_pos[1] - start_pos[1]))
-                
-                # Small bright dot
-                if self.effect_toggles['animated_properties']:
-                    sparkle_intensity = 0.5 + 0.5 * math.sin(self.time * 0.2 + i * 2)
-                else:
-                    sparkle_intensity = 1.0
-                    
-                if self.effect_toggles['laser_core_halo']:
-                    sparkle_color = tuple(min(255, int(c * sparkle_intensity)) for c in core_color)
-                else:
-                    sparkle_color = self.apply_vibrance(tuple(min(255, int(c * sparkle_intensity)) for c in base_color))
-                pygame.draw.circle(self.screen, sparkle_color, (sparkle_x, sparkle_y), max(1, int(2 * thickness_multiplier * 0.5)))
+        """Draw a simple solid laser beam without effects"""
+        # Simple line with vibrance applied
+        simple_color = self.apply_vibrance(base_color)
+        pygame.draw.line(self.screen, simple_color, start_pos, end_pos, max(1, int(3 * thickness_multiplier)))
     
     def draw_faded_solid_base(self, start_pos, end_pos, base_color, core_color, thickness_multiplier, pulse, intensity):
         """Draw a faded solid line as the base for the dashed effect"""
         # Reduce intensity for the faded effect (30-50% of original)
         fade_intensity = intensity * 0.4
-        fade_pulse = pulse * 0.4
         
-        # Draw faded glow if gradient/glow is enabled
-        if self.effect_toggles['gradient_glow']:
-            if base_color == GREEN:
-                faded_glow_color = (0, min(255, int(150 * fade_pulse)), 0)
-            elif base_color == YELLOW:
-                faded_glow_color = (min(255, int(200 * fade_pulse)), min(255, int(200 * fade_pulse)), 0)
-            else:  # ORANGE/RED
-                faded_glow_color = (min(255, int(200 * fade_pulse)), min(255, int(100 * fade_pulse)), 0)
-            
-            # Apply vibrance to faded glow colors
-            faded_glow_color = self.apply_vibrance(faded_glow_color)
-            
-            # Draw faded glow layers (thinner than normal)
-            pygame.draw.line(self.screen, faded_glow_color, start_pos, end_pos, int(8 * thickness_multiplier))
-            
-            # Middle faded glow
-            faded_middle_color = tuple(min(255, int(c * 1.2)) for c in faded_glow_color)
-            pygame.draw.line(self.screen, faded_middle_color, start_pos, end_pos, int(5 * thickness_multiplier))
-            
-            # Inner faded glow
-            faded_inner_color = tuple(min(255, int(c * 1.5)) for c in faded_glow_color)
-            pygame.draw.line(self.screen, faded_inner_color, start_pos, end_pos, int(3 * thickness_multiplier))
-        
-        # Draw faded core beam
-        if self.effect_toggles['laser_core_halo']:
-            faded_core_color = tuple(min(255, int(c * fade_intensity)) for c in core_color)
-            pygame.draw.line(self.screen, faded_core_color, start_pos, end_pos, max(1, int(1.5 * thickness_multiplier)))
-        else:
-            faded_base_color = self.apply_vibrance(tuple(min(255, int(c * fade_intensity)) for c in base_color))
-            pygame.draw.line(self.screen, faded_base_color, start_pos, end_pos, max(1, int(2 * thickness_multiplier)))
+        # Draw simple faded line with vibrance
+        faded_base_color = self.apply_vibrance(tuple(min(255, int(c * fade_intensity)) for c in base_color))
+        pygame.draw.line(self.screen, faded_base_color, start_pos, end_pos, max(1, int(2 * thickness_multiplier)))
     
     def draw_pulsing_segments(self, start_pos, end_pos, base_color, core_color, thickness_multiplier, pulse, intensity, cumulative_distance):
         """Draw a moving dashed line like energy bursts traveling through the fiber"""
@@ -386,18 +287,15 @@ class OpticalFiberSimulation:
         dx_norm = dx / beam_length
         dy_norm = dy / beam_length
         
-        # Dash properties - controlled by sliders
+        # Dash properties - using hardcoded values
         dash_length = 10 * thickness_multiplier     # Dash length based on thickness
-        gap_length = 50 * thickness_multiplier * self.get_dash_gap_multiplier()  # Gap controlled by slider
+        gap_length = 50 * thickness_multiplier * self.get_dash_gap_multiplier()  # Gap controlled by hardcoded value
         total_pattern_length = dash_length + gap_length
         
-        # Animation offset - uses cumulative distance for continuous flow across segments
-        if self.effect_toggles['animated_properties']:
-            # Use cumulative distance to make dashes flow continuously across all segments
-            # Subtract offset to make dashes move from left to right (in direction of light travel)
-            animation_offset = (-self.global_dash_offset + cumulative_distance) % total_pattern_length
-        else:
-            animation_offset = cumulative_distance % total_pattern_length
+        # Animation offset - always animated since we need pulsing to work
+        # Use cumulative distance to make dashes flow continuously across all segments
+        # Subtract offset to make dashes move from left to right (in direction of light travel)
+        animation_offset = (-self.global_dash_offset + cumulative_distance) % total_pattern_length
         
         # Calculate how many complete patterns fit in the beam
         num_patterns = int((beam_length + total_pattern_length) / total_pattern_length) + 2
@@ -433,69 +331,15 @@ class OpticalFiberSimulation:
             dash_start = (dash_start_x, dash_start_y)
             dash_end = (dash_end_x, dash_end_y)
             
-            # Calculate dash intensity (can add subtle brightness variation)
+            # Calculate dash intensity with brightness variation for animation
             dash_intensity = intensity
-            if self.effect_toggles['animated_properties']:
-                # Optional: Add slight brightness variation to individual dashes
-                brightness_variation = 0.9 + 0.1 * math.sin(self.time * 0.05 + i * 0.8)
-                dash_intensity *= brightness_variation
+            # Add slight brightness variation to individual dashes for animation
+            brightness_variation = 0.9 + 0.1 * math.sin(self.time * 0.05 + i * 0.8)
+            dash_intensity *= brightness_variation
             
-            # Draw dash glow if enabled
-            if self.effect_toggles['gradient_glow']:
-                if base_color == GREEN:
-                    glow_color = (0, min(255, int(150 * pulse * dash_intensity)), 0)
-                elif base_color == YELLOW:
-                    glow_color = (min(255, int(200 * pulse * dash_intensity)), min(255, int(200 * pulse * dash_intensity)), 0)
-                else:  # ORANGE/RED
-                    glow_color = (min(255, int(200 * pulse * dash_intensity)), min(255, int(100 * pulse * dash_intensity)), 0)
-                
-                # Apply vibrance to dash glow colors
-                glow_color = self.apply_vibrance(glow_color)
-                
-                # Draw glow layers for each dash
-                pygame.draw.line(self.screen, glow_color, dash_start, dash_end, int(12 * thickness_multiplier))
-                
-                middle_color = tuple(min(255, int(c * 1.2)) for c in glow_color)
-                pygame.draw.line(self.screen, middle_color, dash_start, dash_end, int(8 * thickness_multiplier))
-                
-                inner_color = tuple(min(255, int(c * 1.5)) for c in glow_color)
-                pygame.draw.line(self.screen, inner_color, dash_start, dash_end, int(5 * thickness_multiplier))
-            
-            # Draw dash core
-            if self.effect_toggles['laser_core_halo']:
-                dash_core_color = tuple(min(255, int(c * dash_intensity)) for c in core_color)
-                pygame.draw.line(self.screen, dash_core_color, dash_start, dash_end, max(1, int(2 * thickness_multiplier)))
-            else:
-                dash_base_color = self.apply_vibrance(tuple(min(255, int(c * dash_intensity)) for c in base_color))
-                pygame.draw.line(self.screen, dash_base_color, dash_start, dash_end, max(1, int(3 * thickness_multiplier)))
-            
-            # Add particles to each dash if enabled
-            if self.effect_toggles['particle_effects']:
-                dash_actual_length = dash_end_distance - dash_start_distance
-                if dash_actual_length > 5:
-                    # Add 1-2 particles per dash
-                    num_particles = max(1, int(dash_actual_length / 8))
-                    for p in range(num_particles):
-                        particle_t = (p + 0.5) / num_particles
-                        particle_distance = dash_start_distance + particle_t * dash_actual_length
-                        
-                        particle_x = int(start_pos[0] + dx_norm * particle_distance)
-                        particle_y = int(start_pos[1] + dy_norm * particle_distance)
-                        
-                        # Particle intensity can sparkle slightly
-                        if self.effect_toggles['animated_properties']:
-                            particle_intensity = 0.8 + 0.2 * math.sin(self.time * 0.1 + p * 2 + i)
-                        else:
-                            particle_intensity = 1.0
-                        
-                        particle_intensity *= dash_intensity
-                        
-                        if self.effect_toggles['laser_core_halo']:
-                            particle_color = tuple(min(255, int(c * particle_intensity)) for c in core_color)
-                        else:
-                            particle_color = self.apply_vibrance(tuple(min(255, int(c * particle_intensity)) for c in base_color))
-                        
-                        pygame.draw.circle(self.screen, particle_color, (particle_x, particle_y), max(1, int(2 * thickness_multiplier * 0.5)))
+            # Draw simple dash with vibrance applied
+            dash_base_color = self.apply_vibrance(tuple(min(255, int(c * dash_intensity)) for c in base_color))
+            pygame.draw.line(self.screen, dash_base_color, dash_start, dash_end, max(1, int(3 * thickness_multiplier)))
     
     def setup_encoder(self):
         """Initialize the Phidget encoder for slider control"""
@@ -690,14 +534,14 @@ class OpticalFiberSimulation:
             if self.effect_toggles['pulsing_segments']:
                 self.draw_pulsing_segments(path_points[i], path_points[i + 1], light_color, 
                                          (255, 255, 255), self.get_thickness_multiplier(), 
-                                         0.8 + 0.2 * math.sin(self.time * 0.1) if self.effect_toggles['animated_properties'] else 1.0, 
+                                         0.8 + 0.2 * math.sin(self.time * 0.1),  # Always animated for pulsing
                                          intensity, cumulative_distance)
             else:
                 self.draw_laser_beam(path_points[i], path_points[i + 1], light_color, intensity)
             
             cumulative_distance += segment_length
         
-        # Draw enhanced bounce points with energy burst effects
+        # Draw enhanced bounce points with simple effects
         for i, (bounce_pos, incident_angle) in enumerate(zip(bounce_positions, bounce_angles)):
             # Color code bounce points based on angle of incidence
             if incident_angle < CRITICAL_ANGLE:
@@ -707,81 +551,27 @@ class OpticalFiberSimulation:
             else:
                 bounce_color = RED
             
-            # Animated bounce effect (only if animated properties are enabled)
-            if self.effect_toggles['animated_properties']:
-                bounce_pulse = 0.7 + 0.3 * math.sin(self.time * 0.15 + i * 0.5)
-            else:
-                bounce_pulse = 1.0
+            # Animated bounce effect (always animated for pulsing)
+            bounce_pulse = 0.7 + 0.3 * math.sin(self.time * 0.15 + i * 0.5)
             
-            # Draw bounce effects based on enabled toggles
-            if self.effect_toggles['gradient_glow']:
-                # Outer energy burst
-                burst_radius = int(12 * bounce_pulse)
-                burst_color = self.apply_vibrance(tuple(int(c * 0.3 * bounce_pulse) for c in bounce_color))
-                pygame.draw.circle(self.screen, burst_color, (int(bounce_pos[0]), int(bounce_pos[1])), burst_radius)
-                
-                # Middle energy ring
-                ring_radius = int(8 * bounce_pulse)
-                ring_color = self.apply_vibrance(tuple(int(c * 0.6 * bounce_pulse) for c in bounce_color))
-                pygame.draw.circle(self.screen, ring_color, (int(bounce_pos[0]), int(bounce_pos[1])), ring_radius)
-            
-            if self.effect_toggles['laser_core_halo']:
-                # Bright core
-                core_radius = int(4 * bounce_pulse)
-                core_color = self.apply_vibrance(tuple(min(255, int(c * bounce_pulse)) for c in bounce_color))
-                pygame.draw.circle(self.screen, core_color, (int(bounce_pos[0]), int(bounce_pos[1])), core_radius)
-            else:
-                # Simple circle
-                simple_bounce_color = self.apply_vibrance(bounce_color)
-                pygame.draw.circle(self.screen, simple_bounce_color, (int(bounce_pos[0]), int(bounce_pos[1])), 3)
+            # Draw simple bounce circle with vibrance
+            simple_bounce_color = self.apply_vibrance(bounce_color)
+            pygame.draw.circle(self.screen, simple_bounce_color, (int(bounce_pos[0]), int(bounce_pos[1])), 3)
         
-        # Enhanced starting point (laser source)
+        # Simple starting point (laser source)
         start_pos = path_points[0]
+        source_pulse = 0.8 + 0.2 * math.sin(self.time * 0.2)
         
-        if self.effect_toggles['animated_properties']:
-            source_pulse = 0.8 + 0.2 * math.sin(self.time * 0.2)
-        else:
-            source_pulse = 1.0
+        # Draw simple source dot with vibrance
+        pygame.draw.circle(self.screen, self.apply_vibrance(GREEN), (int(start_pos[0]), int(start_pos[1])), 5)
         
-        # Draw source effects based on enabled toggles
-        if self.effect_toggles['gradient_glow']:
-            # Laser source glow
-            source_glow_radius = int(15 * source_pulse)
-            source_glow_color = self.apply_vibrance((0, int(100 * source_pulse), 0))
-            pygame.draw.circle(self.screen, source_glow_color, (int(start_pos[0]), int(start_pos[1])), source_glow_radius)
-        
-        if self.effect_toggles['laser_core_halo']:
-            # Laser source core
-            pygame.draw.circle(self.screen, self.apply_vibrance(WHITE), (int(start_pos[0]), int(start_pos[1])), 8)
-            pygame.draw.circle(self.screen, self.apply_vibrance(GREEN), (int(start_pos[0]), int(start_pos[1])), 6)
-            pygame.draw.circle(self.screen, self.apply_vibrance((0, 255, 0)), (int(start_pos[0]), int(start_pos[1])), 3)
-        else:
-            # Simple source dot
-            pygame.draw.circle(self.screen, self.apply_vibrance(GREEN), (int(start_pos[0]), int(start_pos[1])), 5)
-        
-        # Enhanced ending point (laser exit)
+        # Simple ending point (laser exit)
         if path_points:
             end_point = path_points[-1]
+            exit_pulse = 0.9 + 0.1 * math.sin(self.time * 0.25)
             
-            if self.effect_toggles['animated_properties']:
-                exit_pulse = 0.9 + 0.1 * math.sin(self.time * 0.25)
-            else:
-                exit_pulse = 1.0
-            
-            # Draw exit effects based on enabled toggles
-            if self.effect_toggles['gradient_glow']:
-                # Exit glow
-                exit_glow_radius = int(12 * exit_pulse)
-                exit_glow_color = self.apply_vibrance(tuple(int(c * 0.3 * exit_pulse) for c in light_color))
-                pygame.draw.circle(self.screen, exit_glow_color, (int(end_point[0]), int(end_point[1])), exit_glow_radius)
-            
-            if self.effect_toggles['laser_core_halo']:
-                # Exit core
-                pygame.draw.circle(self.screen, self.apply_vibrance(WHITE), (int(end_point[0]), int(end_point[1])), 8)
-                pygame.draw.circle(self.screen, self.apply_vibrance(light_color), (int(end_point[0]), int(end_point[1])), 6)
-            else:
-                # Simple exit dot
-                pygame.draw.circle(self.screen, self.apply_vibrance(light_color), (int(end_point[0]), int(end_point[1])), 5)
+            # Draw simple exit dot with vibrance
+            pygame.draw.circle(self.screen, self.apply_vibrance(light_color), (int(end_point[0]), int(end_point[1])), 5)
     
     def draw_info(self, total_distance, bounce_angles):
         # Remove all text information display for minimal version
@@ -810,8 +600,8 @@ class OpticalFiberSimulation:
             # Update slider from encoder input
             self.update_slider_from_encoder()
             
-            # Update global dash offset for continuous dashed line animation (hardcoded speed 4.9x)
-            if self.effect_toggles['animated_properties'] and self.effect_toggles['pulsing_segments']:
+            # Update global dash offset for continuous dashed line animation (always animated for pulsing)
+            if self.effect_toggles['pulsing_segments']:
                 self.global_dash_offset += 2.5 * self.dash_speed_multiplier  # Using hardcoded speed
             
             self.handle_events()
