@@ -664,7 +664,7 @@ class OpticalFiberSimulation:
             self.encoder_enabled = False
             self.encoder_device = None
     
-    def on_encoder_position_change(self, positionChange, timeChange, indexTriggered):
+    def on_encoder_position_change(self, encoder, positionChange, timeChange, indexTriggered):
         """Handle encoder position changes with smoothing"""
         try:
             current_time = time.time()
